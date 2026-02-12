@@ -1,16 +1,12 @@
-// --- js/node.js ---
-
-// Colors
 var regFill = "white";
 var highlightFill = "lightblue";
 var regFillText = "black";
 var highlightFillText = "white";
 let arrayContainer;
 
-// 1. Create the SVG Container
 function createContainer(id, arr, width, height) {
     let div = d3.select(`div#${id}`);
-    div.html(""); // Clear existing
+    div.html("");
     
     arrayContainer = div.append('svg')
         .attr('width', width || 800)
@@ -19,13 +15,12 @@ function createContainer(id, arr, width, height) {
     return arrayContainer;
 }
 
-// 2. Draw the Array Rectangles
 function createArray(arr, x, y, width, height, container) {
     if(!container) container = arrayContainer;
 
     var arrayData = arr.map((value, i) => {
         return {
-            x: x + (i * 55), // Spacing
+            x: x + (i * 55), 
             y: y,
             width: width,
             height: height,
@@ -34,7 +29,6 @@ function createArray(arr, x, y, width, height, container) {
         }
     });
 
-    // Rectangles
     var elementsArr = container.selectAll("rect")
         .data(arrayData)
         .enter()
@@ -47,7 +41,6 @@ function createArray(arr, x, y, width, height, container) {
         .attr("stroke", "black")
         .attr("stroke-width", 2);
 
-    // Text Values
     container.selectAll("text.rect")
         .data(arrayData)
         .enter()
@@ -61,7 +54,6 @@ function createArray(arr, x, y, width, height, container) {
         .attr("font-family", "sans-serif")
         .attr("font-weight", "bold");
 
-    // Index Labels
     container.selectAll("text.index")
         .data(arrayData)
         .enter()
