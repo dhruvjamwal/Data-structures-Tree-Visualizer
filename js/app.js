@@ -1,135 +1,209 @@
+const output = document.getElementById("tree");
 
-function createBinarySearchTree() {
-  const input = document.getElementById("array-input").value;
-  // Convert "10 20 5" string into [10, 20, 5] array
-  const data = input.split(" ").map(Number).filter(n => !isNaN(n));
+function getInput() {
+    const value = document.getElementById("inp").value;
+    var arr = value.split(" ")
+    var num = [];
 
-  if (data.length === 0) {
-    alert("Please enter some numbers!");
-    return;
-  }
-
-  // Build the tree object
-  const root = buildTree(data);
-
-  // Draw it with D3
-  drawTree(root);
+    for (var i = 0; i < arr.length; i++) {
+        if (!isNaN(arr[i]) && arr[i] != "\n") {
+            num.push(arr[i])
+        }
+    }
+    return num
 }
 
-// 2. Helper: Simple BST Builder
-// (Ensures we have a valid tree structure even if nodes.js is missing)
-class Node {
-  constructor(value) {
-    this.value = value;
-    this.left = null;
-    this.right = null;
-  }
+function action() {
+    getRoot()
+    const el = document.querySelector('#tree');
+    el.onwheel = zoom;
+
 }
 
-function buildTree(data) {
-  if (data.length === 0) return null;
-  const root = new Node(data[0]);
-  
-  for (let i = 1; i < data.length; i++) {
-    insertNode(root, data[i]);
-  }
-  return root;
+function getRoot() {
+    var result = getInput()
+
+    var root = createNodes(result);
+    return root
 }
 
-function insertNode(node, value) {
-  if (value < node.value) {
-    if (node.left === null) node.left = new Node(value);
-    else insertNode(node.left, value);
-  } else {
-    if (node.right === null) node.right = new Node(value);
-    else insertNode(node.right, value);
-  }
+var tree = document.getElementById("tree");
+var starty, startx, scrleft, scrtop, isdown;
+
+//https://codepen.io/Gutto/pen/GBLPyN
+tree.addEventListener('mousedown', e => MouseDown(e));
+tree.addEventListener('mouseup', e => mouseUp(e))
+tree.addEventListener('mouseleave', e => mouseLeave(e));
+tree.addEventListener('mousemove', e => mouseMove(e));
+
+function MouseDown(e) {
+    isdown = true;
+    startx = e.pageX - tree.offsetLeft;
+    starty = e.pageY - tree.offsetTop;
+    scrleft = tree.scrollLeft;
+    scrtop = tree.scrollTop;
 }
 
-// 3. The Visualization Logic (D3 v5)
-// This recreates the reference animations: Elastic Pop & Delayed Paths
-function drawTree(rootData) {
-  // Clear previous SVG
-  const container = document.getElementById("binary-tree");
-  container.innerHTML = "";
+function mouseUp(e) {
+    isdown = false;
+}
 
-  if (!rootData) return;
+function mouseLeave(e) {
+    isdown = false;
+}
 
-  // -- Configuration --
-  const margin = { top: 40, right: 90, bottom: 50, left: 90 };
-  const width = 1000 - margin.left - margin.right;
-  const height = 500 - margin.top - margin.bottom;
+function mouseMove(e) {
+    if (isdown) {
+        e.preventDefault();
 
-  // -- Setup SVG --
-  const svg = d3.select("#binary-tree").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        var y = e.pageY - tree.offsetTop;
+        var goY = y - starty;
+        tree.scrollTop = scrtop - goY;
 
-  // -- Convert to D3 Hierarchy --
-  const root = d3.hierarchy(rootData, d => {
-    const children = [];
-    if (d.left) children.push(d.left);
-    if (d.right) children.push(d.right);
-    return children.length ? children : null;
-  });
+        var x = e.pageX - tree.offsetLeft;
+        var goX = x - startx;
+        tree.scrollLeft = scrleft - goX;
+    }
+}
+let scale = 1;
 
-  // -- Calculate Layout --
-  const treeLayout = d3.tree().size([width, height]);
-  treeLayout(root);
+//https://developer.mozilla.org/en-US/docs/Web/API/Element/wheel_event
+function zoom(event) {
+    const el = document.querySelector('svg');
 
-  // -- 1. Draw Links (Paths) --
-  // D3 v5 uses d3.linkVertical()
-  const linkGenerator = d3.linkVertical()
-    .x(d => d.x)
-    .y(d => d.y * 1.5); // *1.5 spreads the tree out vertically
+    event.preventDefault();
 
-  const links = svg.selectAll(".link")
-    .data(root.links())
-    .enter().append("path")
-    .attr("class", "link")
-    .attr("d", linkGenerator)
-    .attr("fill", "none")
-    .attr("stroke", "#555")
-    .attr("stroke-width", "2px")
-    .attr("opacity", 0); // Start hidden
+    scale += event.deltaY * -0.001;
 
-  // ANIMATION: Fade in links one by one
-  links.transition()
-    .delay((d, i) => i * 85) // Delay matches reference
-    .duration(750)
-    .attr("opacity", 1);
+    // Restrict scale
+    scale = Math.min(Math.max(.250, scale), 1);
 
-  // -- 2. Draw Nodes (Circles) --
-  const nodes = svg.selectAll(".node")
-    .data(root.descendants())
-    .enter().append("g")
-    .attr("class", "node")
-    .attr("transform", d => "translate(" + d.x + "," + (d.y * 1.5) + ")");
+    // Apply scale transform
+    el.style.transform = `scale(${scale})`;
+}
 
-  // ANIMATION: Elastic Pop
-  nodes.append("circle")
-    .attr("r", 0) // Start at radius 0
-    .attr("fill", d => d.children ? "lightblue" : "lightgray") // Inner vs Leaf color
-    .attr("stroke", "steelblue")
-    .attr("stroke-width", "3px")
-    .transition()
-    .delay((d, i) => i * 80) // Delay matches reference
-    .duration(1000)
-    .ease(d3.easeElastic) // <-- THE BOUNCE EFFECT
-    .attr("r", 20);
+function clear(el) {
+    var allContainers = document.querySelectorAll(".numContainer")
+    var inp = document.getElementById("inp")
 
-  // -- 3. Draw Labels (Text) --
-  nodes.append("text")
-    .attr("dy", 5)
-    .attr("text-anchor", "middle")
-    .text(d => d.data.value)
-    .style("font-size", "12px")
-    .style("font-weight", "bold")
-    .style("opacity", 0)
-    .transition()
-    .delay((d, i) => i * 90)
-    .duration(1000)
-    .style("opacity", 1);
+    inp.value += ''
+
+    allContainers.forEach(item => {
+        if (item != el) {
+            item.style.transform = "scale(0.9)"
+            item.style.opacity = 0.7
+        } else {
+            item.style.transform = "scale(1.1)"
+            item.style.opacity = 1
+        }
+
+    })
+}
+
+function toggleLock() {
+    var btn = document.querySelector(".btn")
+    var inp = document.getElementById("inp")
+    var btn_click = document.querySelector(".btn-clear")
+    let cont = document.querySelector(".findContainer")
+
+
+    if (btn.innerHTML == "Lock") {
+        btn.innerHTML = "Unlock"
+        clearAndCreate()
+
+
+    } else {
+        cont.innerHTML = ''
+        inp.style.display = "block"
+        btn_click.style.display = "none"
+        btn.innerHTML = "Lock"
+
+        var circles = document.querySelectorAll(".node");
+
+        circles.forEach((circle, i) => {
+            setTimeout(() => {
+                circle.firstChild.classList.remove("green")
+                circle.firstChild.classList.remove("gold")
+                circle.firstChild.classList.remove("gray")
+
+
+            }, i * 100)
+        })
+    }
+}
+
+function clearAndCreate() {
+    var inp = document.getElementById("inp")
+    var btn_click = document.querySelector(".btn-clear")
+    let cont = document.querySelector(".findContainer")
+    document.querySelector(".findContainer").innerHTML = ''
+
+    var result = getInput()
+    result = result.filter(item => item !== '')
+
+    result = [...new Set(result)]
+
+    if (result.length > 0) {
+        inp.style.display = "none"
+        btn_click.style.display = "block"
+
+    }
+
+    result.forEach((circle) => {
+        var root = getRoot()[0]
+        let el = document.createElement("button");
+        el.classList.add("numContainer");
+        el.innerHTML = circle
+        el.style.transition = "1s"
+        el.onclick = function () {
+            clear(el)
+            findTheNode(root, el)
+        }
+        cont.appendChild(el)
+    })
+}
+
+function findTheNode(root, node) {
+    var value = parseFloat(node.innerHTML)
+
+    fillToColor(root.value, root.value == value ? "green" : "gold")
+
+    if (root.value == value) return
+
+    if (root.value > value) {
+        findTheNode(root.left, node)
+        fillTheCircle(root.right, value)
+
+    } else {
+        findTheNode(root.right, node)
+        fillTheCircle(root.left, value)
+
+    }
+}
+
+function fillTheCircle(root, value) {
+
+    if (root == null || root.value == value) return
+    fillToColor(root.value, "gray")
+
+    fillTheCircle(root.left)
+    fillTheCircle(root.right)
+
+}
+
+function fillToColor(value, color) {
+    var circles = document.querySelectorAll(".node");
+
+    circles.forEach((circle, i) => {
+        circle.firstChild.classList.remove("green")
+        circle.firstChild.classList.remove("gold")
+        circle.firstChild.classList.remove("gray")
+        if (circle.lastChild.innerHTML === value) {
+
+            setTimeout(() => {
+                circle.firstChild.classList.add(color)
+            }, i * 100)
+
+        }
+    })
 }
