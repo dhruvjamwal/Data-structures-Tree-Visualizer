@@ -71,14 +71,14 @@ function drawBinaryTree(root) {
         .transition()
         .delay((d, i) => i * 50)
         .duration(1000)
-        .ease(d3.easeElastic) // <--- The Elastic Effect
+        .ease(d3.easeElastic)
         .attr("r", 20);
 
-    // Text Animation
+    // Text Animation (FIXED: Handles NaN or undefined)
     nodes.append("text")
         .attr("dy", 5)
         .attr("text-anchor", "middle")
-        .text(d => d.data.value)
+        .text(d => (isNaN(d.data.value) || d.data.value === undefined) ? "?" : d.data.value) // Prevent NaN
         .style("font-size", "12px")
         .style("font-weight", "bold")
         .style("opacity", 0)
@@ -93,10 +93,12 @@ function treeAndArray() {
     let inputText = document.getElementById("array-input").value;
     updateInfo("Binary Tree", "Standard level-order insertion (Index 0 is root, 1 is left, 2 is right, etc).");
     
-    if (inputText !== '') {
+    if (inputText) {
         input = parseInput(inputText);
-        let root = buildLevelOrderTree(input);
-        drawBinaryTree(root);
+        if (input.length > 0) {
+            let root = buildLevelOrderTree(input);
+            drawBinaryTree(root);
+        }
     }
 }
 
@@ -105,13 +107,13 @@ function heapify() {
     let inputText = document.getElementById("array-input").value;
     updateInfo("Max-Heap", "Parent's value is always greater than or equal to its children.");
 
-    if (inputText !== '') {
+    if (inputText) {
         input = parseInput(inputText);
-        // Transform input array into a Max Heap array
-        buildMaxHeapArray(input);
-        // Visualize that heap array as a tree
-        let root = buildLevelOrderTree(input);
-        drawBinaryTree(root);
+        if (input.length > 0) {
+            buildMaxHeapArray(input); // Sorts array to heap
+            let root = buildLevelOrderTree(input); // Draws that heap
+            drawBinaryTree(root);
+        }
     }
 }
 
@@ -120,10 +122,12 @@ function createBinarySearchTree() {
     let inputText = document.getElementById("array-input").value;
     updateInfo("Binary Search Tree", "Input sorted and arranged: Left child < Parent < Right child.");
 
-    if (inputText !== '') {
+    if (inputText) {
         input = parseInput(inputText);
-        let root = buildBST(input);
-        drawBinaryTree(root);
+        if (input.length > 0) {
+            let root = buildBST(input);
+            drawBinaryTree(root);
+        }
     }
 }
 
@@ -139,8 +143,14 @@ class Node {
 }
 
 // Helper: Parse comma or space separated string to number array
+// FIXED: This removes empty strings to prevent NaN
 function parseInput(text) {
-    return text.trim().split(/[\s,]+/).map(num => parseInt(num)).filter(n => !isNaN(n));
+    if (!text) return [];
+    return text.trim()
+        .split(/[\s,]+/)             // Split by space OR comma
+        .filter(str => str !== "")   // Remove empty strings (fixes trailing commas)
+        .map(num => Number(num))     // Convert to number
+        .filter(n => !isNaN(n));     // Remove any remaining NaNs
 }
 
 // Helper: Update Title and Instructions
@@ -152,7 +162,7 @@ function updateInfo(title, instructions) {
 
 // Algorithm: Build Level Order Tree (Used for Binary Tree & Heap)
 function buildLevelOrderTree(arr) {
-    if (arr.length === 0) return null;
+    if (!arr || arr.length === 0) return null;
     let nodes = arr.map(val => new Node(val));
     
     for (let i = 0; i < nodes.length; i++) {
@@ -166,7 +176,7 @@ function buildLevelOrderTree(arr) {
 
 // Algorithm: Build Binary Search Tree
 function buildBST(arr) {
-    if (arr.length === 0) return null;
+    if (!arr || arr.length === 0) return null;
     let root = new Node(arr[0]);
     for (let i = 1; i < arr.length; i++) {
         insertBST(root, arr[i]);
@@ -186,7 +196,6 @@ function insertBST(node, value) {
 
 // Algorithm: Convert Array to Max Heap (In-place)
 function buildMaxHeapArray(arr) {
-    // Start from the last non-leaf node and heapify down
     for (let i = Math.floor(arr.length / 2) - 1; i >= 0; i--) {
         maxHeapify(arr, arr.length, i);
     }
@@ -210,5 +219,6 @@ function maxHeapify(arr, n, i) {
 // Initialize with default values on load
 window.onload = function() {
     let defaultInput = "10, 20, 60, 30, 70, 40, 50";
-    document.getElementById("array-input").value = defaultInput;
+    let inputEl = document.getElementById("array-input");
+    if (inputEl) inputEl.value = defaultInput;
 };
