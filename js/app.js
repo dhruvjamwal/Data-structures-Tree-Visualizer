@@ -1,209 +1,198 @@
-const output = document.getElementById("tree");
+// Global Input Variable
+let input;
 
-function getInput() {
-    const value = document.getElementById("inp").value;
-    var arr = value.split(" ")
-    var num = [];
+// 1. Restore the Reset Function
+function reset() {
+  d3.selectAll('svg').remove();
+  // Clear any array visuals if they exist
+  const arrayContainer = document.getElementById("array-visual");
+  if (arrayContainer) arrayContainer.innerHTML = ""; 
+}
 
-    for (var i = 0; i < arr.length; i++) {
-        if (!isNaN(arr[i]) && arr[i] != "\n") {
-            num.push(arr[i])
+// 2. Restore Tree and Array Visualization (Uses your original Logic)
+function treeAndArray() {
+  reset();
+  let inputText = document.getElementById("array-input");
+  document.querySelector('#visual-title').innerHTML = "Binary Tree And Array";
+  document.querySelector('#instructions').innerHTML = "Click a value in the binary tree or array to highlight its corresponding location in the data structure.";
+  
+  if (inputText.value !== '') {
+      input = inputText.value.trim().split(/\s+|\,+/g).map((num) => parseInt(num));
+      createBinaryTreeAndArr(input);
+  }
+}
+
+// 3. Restore Heapify (Uses your original Logic)
+function heapify() {
+  reset();
+  let inputText = document.getElementById("array-input");
+  
+  if (inputText.value !== '') {
+    input = inputText.value.trim().split(/\s+|\,+/g).map((num) => parseInt(num));
+    // Assuming makeHeap is in heap.js
+    makeHeap(input, input.length);
+    createBinaryTreeAndArr(input);
+    document.getElementById('instructions').innerHTML = "<p> Parent's value is always greater than or equal to the values of its children.</p>";
+    document.getElementById('visual-title').innerHTML = "Max-Heap Binary Tree And Array";
+  }
+}
+
+// 4. Restore Helper for Tree/Array (Uses your original Logic)
+function createBinaryTreeAndArr(arr) {
+  // Assuming createContainer and createArray are in nodes.js
+  if (typeof createContainer === "function") {
+      createContainer("array-visual", arr, arr.length * 60, 100);
+  }
+  
+  // Try to use your original Tree class if it exists for the basic view
+  if (typeof Tree === "function") {
+      let tree = new Tree();
+      tree.createBinaryTree(input);
+  }
+  
+  if (typeof createArray === "function") {
+      createArray(arr, 2, 30, 50, 50);
+  }
+}
+
+// 5. UPDATE: Binary Search Tree Visualization
+// This now uses the NEW animation logic
+function createBinarySearchTree() {
+  let inputText = document.getElementById("array-input");
+  
+  if (inputText.value !== '') {
+    reset();
+    input = inputText.value.trim().split(/\s+|\,+/g).map((num) => parseInt(num));
+    
+    document.querySelector('#visual-title').innerHTML = "Binary Search Tree";
+    document.querySelector('#instructions').innerHTML = "The input data sorted and arranged into a Binary Search Tree with Elastic Animations.";
+
+    // 1. Build the tree structure locally
+    let root = simpleBuildBST(input);
+
+    // 2. Draw it with the new D3 v5 animation
+    drawBinaryTree(root);
+  }
+}
+
+// --- NEW ANIMATION CODE BELOW ---
+
+// Helper: Build a simple object structure for D3
+function simpleBuildBST(data) {
+    if (!data || data.length === 0) return null;
+    
+    class Node {
+        constructor(value) {
+            this.value = value;
+            this.left = null;
+            this.right = null;
         }
     }
-    return num
-}
-
-function action() {
-    getRoot()
-    const el = document.querySelector('#tree');
-    el.onwheel = zoom;
-
-}
-
-function getRoot() {
-    var result = getInput()
-
-    var root = createNodes(result);
-    return root
-}
-
-var tree = document.getElementById("tree");
-var starty, startx, scrleft, scrtop, isdown;
-
-//https://codepen.io/Gutto/pen/GBLPyN
-tree.addEventListener('mousedown', e => MouseDown(e));
-tree.addEventListener('mouseup', e => mouseUp(e))
-tree.addEventListener('mouseleave', e => mouseLeave(e));
-tree.addEventListener('mousemove', e => mouseMove(e));
-
-function MouseDown(e) {
-    isdown = true;
-    startx = e.pageX - tree.offsetLeft;
-    starty = e.pageY - tree.offsetTop;
-    scrleft = tree.scrollLeft;
-    scrtop = tree.scrollTop;
-}
-
-function mouseUp(e) {
-    isdown = false;
-}
-
-function mouseLeave(e) {
-    isdown = false;
-}
-
-function mouseMove(e) {
-    if (isdown) {
-        e.preventDefault();
-
-        var y = e.pageY - tree.offsetTop;
-        var goY = y - starty;
-        tree.scrollTop = scrtop - goY;
-
-        var x = e.pageX - tree.offsetLeft;
-        var goX = x - startx;
-        tree.scrollLeft = scrleft - goX;
-    }
-}
-let scale = 1;
-
-//https://developer.mozilla.org/en-US/docs/Web/API/Element/wheel_event
-function zoom(event) {
-    const el = document.querySelector('svg');
-
-    event.preventDefault();
-
-    scale += event.deltaY * -0.001;
-
-    // Restrict scale
-    scale = Math.min(Math.max(.250, scale), 1);
-
-    // Apply scale transform
-    el.style.transform = `scale(${scale})`;
-}
-
-function clear(el) {
-    var allContainers = document.querySelectorAll(".numContainer")
-    var inp = document.getElementById("inp")
-
-    inp.value += ''
-
-    allContainers.forEach(item => {
-        if (item != el) {
-            item.style.transform = "scale(0.9)"
-            item.style.opacity = 0.7
-        } else {
-            item.style.transform = "scale(1.1)"
-            item.style.opacity = 1
+    
+    const root = new Node(data[0]);
+    
+    for(let i = 1; i < data.length; i++) {
+        let current = root;
+        while(true) {
+            if(data[i] < current.value) {
+                if(!current.left) { current.left = new Node(data[i]); break; }
+                current = current.left;
+            } else {
+                if(!current.right) { current.right = new Node(data[i]); break; }
+                current = current.right;
+            }
         }
-
-    })
-}
-
-function toggleLock() {
-    var btn = document.querySelector(".btn")
-    var inp = document.getElementById("inp")
-    var btn_click = document.querySelector(".btn-clear")
-    let cont = document.querySelector(".findContainer")
-
-
-    if (btn.innerHTML == "Lock") {
-        btn.innerHTML = "Unlock"
-        clearAndCreate()
-
-
-    } else {
-        cont.innerHTML = ''
-        inp.style.display = "block"
-        btn_click.style.display = "none"
-        btn.innerHTML = "Lock"
-
-        var circles = document.querySelectorAll(".node");
-
-        circles.forEach((circle, i) => {
-            setTimeout(() => {
-                circle.firstChild.classList.remove("green")
-                circle.firstChild.classList.remove("gold")
-                circle.firstChild.classList.remove("gray")
-
-
-            }, i * 100)
-        })
     }
+    return root;
 }
 
-function clearAndCreate() {
-    var inp = document.getElementById("inp")
-    var btn_click = document.querySelector(".btn-clear")
-    let cont = document.querySelector(".findContainer")
-    document.querySelector(".findContainer").innerHTML = ''
+// The D3 v5 Drawing Function with Transitions
+function drawBinaryTree(root) {
+    if (!root) return;
 
-    var result = getInput()
-    result = result.filter(item => item !== '')
+    // 1. Setup
+    const container = d3.select("#binary-tree");
+    // Dimensions
+    const margin = { top: 40, right: 90, bottom: 50, left: 90 };
+    const width = 800 - margin.left - margin.right;
+    const height = 500 - margin.top - margin.bottom;
 
-    result = [...new Set(result)]
+    const svg = container.append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    if (result.length > 0) {
-        inp.style.display = "none"
-        btn_click.style.display = "block"
+    // 2. Data Hierarchy
+    const hierarchyData = d3.hierarchy(root, d => {
+        let children = [];
+        if (d.left) children.push(d.left);
+        if (d.right) children.push(d.right);
+        return children.length ? children : null;
+    });
 
-    }
+    // 3. Layout
+    const treeLayout = d3.tree().size([width, height]);
+    const rootNode = treeLayout(hierarchyData);
+    
+    // Adjust depth (vertical spacing)
+    rootNode.descendants().forEach(d => { d.y = d.depth * 70; });
 
-    result.forEach((circle) => {
-        var root = getRoot()[0]
-        let el = document.createElement("button");
-        el.classList.add("numContainer");
-        el.innerHTML = circle
-        el.style.transition = "1s"
-        el.onclick = function () {
-            clear(el)
-            findTheNode(root, el)
-        }
-        cont.appendChild(el)
-    })
+    // 4. Draw Links (Paths)
+    const linkGenerator = d3.linkVertical()
+        .x(d => d.x)
+        .y(d => d.y);
+
+    const links = svg.selectAll(".link")
+        .data(rootNode.links())
+        .enter().append("path")
+        .attr("class", "link")
+        .attr("d", linkGenerator)
+        .attr("fill", "none")
+        .attr("stroke", "#ccc")
+        .attr("stroke-width", 2)
+        .attr("opacity", 0); // Start hidden
+
+    // Transition: Fade in links
+    links.transition()
+        .delay((d, i) => i * 85)
+        .duration(750)
+        .attr("opacity", 1);
+
+    // 5. Draw Nodes (Circles)
+    const nodes = svg.selectAll(".node")
+        .data(rootNode.descendants())
+        .enter().append("g")
+        .attr("class", "node")
+        .attr("transform", d => `translate(${d.x},${d.y})`);
+
+    // Transition: Elastic Pop
+    nodes.append("circle")
+        .attr("r", 0) // Start invisible
+        .attr("fill", d => (d.children || d._children) ? "lightblue" : "lightgray")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width", 3)
+        .transition()
+        .delay((d, i) => i * 80)
+        .duration(1000)
+        .ease(d3.easeElastic) // The bounce effect
+        .attr("r", 20);
+
+    // Transition: Text Fade
+    nodes.append("text")
+        .attr("dy", 5)
+        .attr("text-anchor", "middle")
+        .text(d => d.data.value)
+        .style("opacity", 0)
+        .transition()
+        .delay((d, i) => i * 90)
+        .duration(1000)
+        .style("opacity", 1);
 }
 
-function findTheNode(root, node) {
-    var value = parseFloat(node.innerHTML)
-
-    fillToColor(root.value, root.value == value ? "green" : "gold")
-
-    if (root.value == value) return
-
-    if (root.value > value) {
-        findTheNode(root.left, node)
-        fillTheCircle(root.right, value)
-
-    } else {
-        findTheNode(root.right, node)
-        fillTheCircle(root.left, value)
-
-    }
-}
-
-function fillTheCircle(root, value) {
-
-    if (root == null || root.value == value) return
-    fillToColor(root.value, "gray")
-
-    fillTheCircle(root.left)
-    fillTheCircle(root.right)
-
-}
-
-function fillToColor(value, color) {
-    var circles = document.querySelectorAll(".node");
-
-    circles.forEach((circle, i) => {
-        circle.firstChild.classList.remove("green")
-        circle.firstChild.classList.remove("gold")
-        circle.firstChild.classList.remove("gray")
-        if (circle.lastChild.innerHTML === value) {
-
-            setTimeout(() => {
-                circle.firstChild.classList.add(color)
-            }, i * 100)
-
-        }
-    })
+// Initial default run
+window.onload = function() {
+    input = [10, 20, 60, 30, 70, 40, 50];
+    let inputTest = document.getElementById("array-input");
+    if(inputTest) inputTest.value = input.join(", ");
 }
