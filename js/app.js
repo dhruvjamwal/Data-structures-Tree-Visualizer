@@ -1,120 +1,147 @@
 // Global Input Variable
 let input;
 
-// 1. Restore the Reset Function
-function reset() {
-  d3.selectAll('svg').remove();
-  // Clear any array visuals if they exist
-  const arrayContainer = document.getElementById("array-visual");
-  if (arrayContainer) arrayContainer.innerHTML = ""; 
-}
+// --- 1. CORE FUNCTIONS (Called by HTML Buttons) ---
 
-// 2. Restore Tree and Array Visualization (Uses your original Logic)
 function treeAndArray() {
-  reset();
-  let inputText = document.getElementById("array-input");
-  document.querySelector('#visual-title').innerHTML = "Binary Tree And Array";
-  document.querySelector('#instructions').innerHTML = "Click a value in the binary tree or array to highlight its corresponding location in the data structure.";
-  
-  if (inputText.value !== '') {
-      input = inputText.value.trim().split(/\s+|\,+/g).map((num) => parseInt(num));
-      createBinaryTreeAndArr(input);
-  }
-}
-
-// 3. Restore Heapify (Uses your original Logic)
-function heapify() {
-  reset();
-  let inputText = document.getElementById("array-input");
-  
-  if (inputText.value !== '') {
-    input = inputText.value.trim().split(/\s+|\,+/g).map((num) => parseInt(num));
-    // Assuming makeHeap is in heap.js
-    makeHeap(input, input.length);
-    createBinaryTreeAndArr(input);
-    document.getElementById('instructions').innerHTML = "<p> Parent's value is always greater than or equal to the values of its children.</p>";
-    document.getElementById('visual-title').innerHTML = "Max-Heap Binary Tree And Array";
-  }
-}
-
-// 4. Restore Helper for Tree/Array (Uses your original Logic)
-function createBinaryTreeAndArr(arr) {
-  // Assuming createContainer and createArray are in nodes.js
-  if (typeof createContainer === "function") {
-      createContainer("array-visual", arr, arr.length * 60, 100);
-  }
-  
-  // Try to use your original Tree class if it exists for the basic view
-  if (typeof Tree === "function") {
-      let tree = new Tree();
-      tree.createBinaryTree(input);
-  }
-  
-  if (typeof createArray === "function") {
-      createArray(arr, 2, 30, 50, 50);
-  }
-}
-
-// 5. UPDATE: Binary Search Tree Visualization
-// This now uses the NEW animation logic
-function createBinarySearchTree() {
-  let inputText = document.getElementById("array-input");
-  
-  if (inputText.value !== '') {
     reset();
-    input = inputText.value.trim().split(/\s+|\,+/g).map((num) => parseInt(num));
+    let inputText = document.getElementById("array-input");
+    document.querySelector('#visual-title').innerHTML = "Binary Tree Representation";
+    document.querySelector('#instructions').innerHTML = "The input array arranged as a complete binary tree (Level Order).";
     
-    document.querySelector('#visual-title').innerHTML = "Binary Search Tree";
-    document.querySelector('#instructions').innerHTML = "The input data sorted and arranged into a Binary Search Tree with Elastic Animations.";
-
-    // 1. Build the tree structure locally
-    let root = simpleBuildBST(input);
-
-    // 2. Draw it with the new D3 v5 animation
-    drawBinaryTree(root);
-  }
+    if (inputText.value !== '') {
+        input = parseInput(inputText.value);
+        // 1. Build Standard Level-Order Tree
+        let root = buildLevelOrderTree(input, 0);
+        // 2. Draw
+        drawBinaryTree(root);
+        drawArray(input);
+    }
 }
 
-// --- NEW ANIMATION CODE BELOW ---
-
-// Helper: Build a simple object structure for D3
-function simpleBuildBST(data) {
-    if (!data || data.length === 0) return null;
+function heapify() {
+    reset();
+    let inputText = document.getElementById("array-input");
     
-    class Node {
-        constructor(value) {
-            this.value = value;
-            this.left = null;
-            this.right = null;
-        }
+    if (inputText.value !== '') {
+        input = parseInput(inputText.value);
+        // 1. Convert Array to Max Heap
+        buildMaxHeap(input);
+        // 2. Build Tree from Heapified Array
+        let root = buildLevelOrderTree(input, 0);
+        
+        document.querySelector('#visual-title').innerHTML = "Max-Heap Visualization";
+        document.querySelector('#instructions').innerHTML = "Parent nodes are always greater than or equal to their children.";
+        
+        // 3. Draw
+        drawBinaryTree(root);
+        drawArray(input);
     }
+}
+
+function createBinarySearchTree() {
+    reset();
+    let inputText = document.getElementById("array-input");
     
+    if (inputText.value !== '') {
+        input = parseInput(inputText.value);
+        
+        document.querySelector('#visual-title').innerHTML = "Binary Search Tree";
+        document.querySelector('#instructions').innerHTML = "The input data sorted and arranged into a Binary Search Tree.";
+
+        // 1. Build BST
+        let root = buildBST(input);
+        // 2. Draw
+        drawBinaryTree(root);
+        // (Optional) Draw sorted array
+        input.sort((a,b) => a - b);
+        drawArray(input);
+    }
+}
+
+// --- 2. HELPER FUNCTIONS ---
+
+function reset() {
+    // Clear both visualization containers
+    d3.select("#binary-tree").html("");
+    d3.select("#array-visual").html("");
+}
+
+function parseInput(value) {
+    // Splits by space or comma and removes non-numbers
+    return value.trim().split(/\s+|\,+/g)
+        .map((num) => parseFloat(num))
+        .filter((num) => !isNaN(num));
+}
+
+// Node Class
+class Node {
+    constructor(value) {
+        this.value = value;
+        this.left = null;
+        this.right = null;
+    }
+}
+
+// A. Build BST (Standard insertion)
+function buildBST(data) {
+    if (!data || data.length === 0) return null;
     const root = new Node(data[0]);
-    
     for(let i = 1; i < data.length; i++) {
-        let current = root;
-        while(true) {
-            if(data[i] < current.value) {
-                if(!current.left) { current.left = new Node(data[i]); break; }
-                current = current.left;
-            } else {
-                if(!current.right) { current.right = new Node(data[i]); break; }
-                current = current.right;
-            }
-        }
+        insertBST(root, data[i]);
     }
     return root;
 }
 
-// The D3 v5 Drawing Function with Transitions
+function insertBST(node, value) {
+    if (value < node.value) {
+        if (node.left === null) node.left = new Node(value);
+        else insertBST(node.left, value);
+    } else {
+        if (node.right === null) node.right = new Node(value);
+        else insertBST(node.right, value);
+    }
+}
+
+// B. Build Level Order Tree (For Heap and Standard Binary Tree)
+function buildLevelOrderTree(arr, i) {
+    if (i >= arr.length) return null;
+    let root = new Node(arr[i]);
+    root.left = buildLevelOrderTree(arr, 2 * i + 1);
+    root.right = buildLevelOrderTree(arr, 2 * i + 2);
+    return root;
+}
+
+// C. Max Heap Logic (Rearranges array in place)
+function buildMaxHeap(arr) {
+    // Start from last non-leaf node and heapify down
+    for (let i = Math.floor(arr.length / 2) - 1; i >= 0; i--) {
+        heapifyDown(arr, arr.length, i);
+    }
+}
+
+function heapifyDown(arr, n, i) {
+    let largest = i;
+    let left = 2 * i + 1;
+    let right = 2 * i + 2;
+
+    if (left < n && arr[left] > arr[largest]) largest = left;
+    if (right < n && arr[right] > arr[largest]) largest = right;
+
+    if (largest !== i) {
+        [arr[i], arr[largest]] = [arr[largest], arr[i]]; // Swap
+        heapifyDown(arr, n, largest);
+    }
+}
+
+// --- 3. D3 DRAWING FUNCTIONS (The Animation Magic) ---
+
 function drawBinaryTree(root) {
     if (!root) return;
 
-    // 1. Setup
     const container = d3.select("#binary-tree");
-    // Dimensions
     const margin = { top: 40, right: 90, bottom: 50, left: 90 };
-    const width = 800 - margin.left - margin.right;
+    const width = 1000 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
     const svg = container.append("svg")
@@ -123,7 +150,7 @@ function drawBinaryTree(root) {
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // 2. Data Hierarchy
+    // D3 Hierarchy
     const hierarchyData = d3.hierarchy(root, d => {
         let children = [];
         if (d.left) children.push(d.left);
@@ -131,19 +158,16 @@ function drawBinaryTree(root) {
         return children.length ? children : null;
     });
 
-    // 3. Layout
     const treeLayout = d3.tree().size([width, height]);
     const rootNode = treeLayout(hierarchyData);
     
-    // Adjust depth (vertical spacing)
+    // Spread vertically
     rootNode.descendants().forEach(d => { d.y = d.depth * 70; });
 
-    // 4. Draw Links (Paths)
-    const linkGenerator = d3.linkVertical()
-        .x(d => d.x)
-        .y(d => d.y);
+    // 1. Draw Links
+    const linkGenerator = d3.linkVertical().x(d => d.x).y(d => d.y);
 
-    const links = svg.selectAll(".link")
+    svg.selectAll(".link")
         .data(rootNode.links())
         .enter().append("path")
         .attr("class", "link")
@@ -151,38 +175,38 @@ function drawBinaryTree(root) {
         .attr("fill", "none")
         .attr("stroke", "#ccc")
         .attr("stroke-width", 2)
-        .attr("opacity", 0); // Start hidden
-
-    // Transition: Fade in links
-    links.transition()
+        .attr("opacity", 0)
+        .transition()
         .delay((d, i) => i * 85)
         .duration(750)
         .attr("opacity", 1);
 
-    // 5. Draw Nodes (Circles)
+    // 2. Draw Nodes
     const nodes = svg.selectAll(".node")
         .data(rootNode.descendants())
         .enter().append("g")
         .attr("class", "node")
         .attr("transform", d => `translate(${d.x},${d.y})`);
 
-    // Transition: Elastic Pop
+    // Circle Pop Animation
     nodes.append("circle")
-        .attr("r", 0) // Start invisible
-        .attr("fill", d => (d.children || d._children) ? "lightblue" : "lightgray")
+        .attr("r", 0)
+        .attr("fill", d => (d.children || d._children) ? "lightblue" : "#f0f0f0")
         .attr("stroke", "steelblue")
         .attr("stroke-width", 3)
         .transition()
         .delay((d, i) => i * 80)
         .duration(1000)
-        .ease(d3.easeElastic) // The bounce effect
+        .ease(d3.easeElastic)
         .attr("r", 20);
 
-    // Transition: Text Fade
+    // Text Fade In
     nodes.append("text")
         .attr("dy", 5)
         .attr("text-anchor", "middle")
         .text(d => d.data.value)
+        .style("font-size", "12px")
+        .style("font-weight", "bold")
         .style("opacity", 0)
         .transition()
         .delay((d, i) => i * 90)
@@ -190,9 +214,66 @@ function drawBinaryTree(root) {
         .style("opacity", 1);
 }
 
-// Initial default run
+// Simple Array Visualizer (to replace the old one)
+function drawArray(arr) {
+    const container = d3.select("#array-visual");
+    const width = 800;
+    const height = 100;
+    const rectWidth = 50;
+    
+    const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height);
+        
+    const g = svg.append("g")
+        .attr("transform", "translate(20, 20)");
+        
+    // Bind Data
+    const groups = g.selectAll("g")
+        .data(arr)
+        .enter().append("g")
+        .attr("transform", (d, i) => `translate(${i * rectWidth}, 0)`);
+        
+    // Draw Rects
+    groups.append("rect")
+        .attr("width", rectWidth - 5)
+        .attr("height", rectWidth - 5)
+        .attr("fill", "white")
+        .attr("stroke", "black")
+        .attr("stroke-width", 2)
+        .style("opacity", 0)
+        .transition()
+        .delay((d, i) => i * 100)
+        .duration(500)
+        .style("opacity", 1);
+        
+    // Draw Text
+    groups.append("text")
+        .attr("x", (rectWidth - 5) / 2)
+        .attr("y", (rectWidth - 5) / 2)
+        .attr("dy", 5)
+        .attr("text-anchor", "middle")
+        .text(d => d)
+        .style("opacity", 0)
+        .transition()
+        .delay((d, i) => i * 100)
+        .duration(500)
+        .style("opacity", 1);
+        
+    // Draw Index
+    groups.append("text")
+        .attr("x", (rectWidth - 5) / 2)
+        .attr("y", rectWidth + 15)
+        .attr("text-anchor", "middle")
+        .text((d, i) => i)
+        .style("font-size", "10px")
+        .style("fill", "red");
+}
+
+// Default run
 window.onload = function() {
-    input = [10, 20, 60, 30, 70, 40, 50];
+    // Pre-fill input for convenience
+    let defaultInput = [10, 20, 60, 30, 70, 40, 50];
     let inputTest = document.getElementById("array-input");
-    if(inputTest) inputTest.value = input.join(", ");
+    if(inputTest) inputTest.value = defaultInput.join(", ");
 }
