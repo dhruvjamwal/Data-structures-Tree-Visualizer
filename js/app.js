@@ -1,78 +1,135 @@
-function drawBinaryTree(root) {
-    // 1. SELECT & CLEAR
-    const container = d3.select("#binary-tree");
-    container.html(""); // Clear previous tree
 
-    if (!root) return;
+function createBinarySearchTree() {
+  const input = document.getElementById("array-input").value;
+  // Convert "10 20 5" string into [10, 20, 5] array
+  const data = input.split(" ").map(Number).filter(n => !isNaN(n));
 
-    // 2. SETUP DIMENSIONS
-    const margin = { top: 40, right: 90, bottom: 50, left: 90 };
-    const width = 800 - margin.left - margin.right;
-    const height = 500 - margin.top - margin.bottom;
+  if (data.length === 0) {
+    alert("Please enter some numbers!");
+    return;
+  }
 
-    const svg = container.append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", `translate(${margin.left},${margin.top})`);
+  // Build the tree object
+  const root = buildTree(data);
 
-    const hierarchyData = d3.hierarchy(root, d => {
-        let children = [];
-        if (d.left) children.push(d.left);
-        if (d.right) children.push(d.right);
-        return children.length ? children : null;
-    });
+  // Draw it with D3
+  drawTree(root);
+}
 
-    // 4. CALCULATE LAYOUT
-    const treeLayout = d3.tree().size([width, height]);
-    const rootNode = treeLayout(hierarchyData);
+// 2. Helper: Simple BST Builder
+// (Ensures we have a valid tree structure even if nodes.js is missing)
+class Node {
+  constructor(value) {
+    this.value = value;
+    this.left = null;
+    this.right = null;
+  }
+}
 
-    // FIX DEPTH (matches the 'd.depth * 70' from your example)
-    rootNode.descendants().forEach(d => { d.y = d.depth * 70; });
-    const linkGenerator = d3.linkVertical()
-        .x(d => d.x)
-        .y(d => d.y);
+function buildTree(data) {
+  if (data.length === 0) return null;
+  const root = new Node(data[0]);
+  
+  for (let i = 1; i < data.length; i++) {
+    insertNode(root, data[i]);
+  }
+  return root;
+}
 
-    const links = svg.selectAll(".link")
-        .data(rootNode.links())
-        .enter().append("path")
-        .attr("class", "link")
-        .attr("d", linkGenerator)
-        .attr("fill", "none")
-        .attr("stroke", "#ccc")
-        .attr("stroke-width", 2)
-        .attr("opacity", 0); // Start hidden
+function insertNode(node, value) {
+  if (value < node.value) {
+    if (node.left === null) node.left = new Node(value);
+    else insertNode(node.left, value);
+  } else {
+    if (node.right === null) node.right = new Node(value);
+    else insertNode(node.right, value);
+  }
+}
 
-    links.transition()
-        .delay((d, i) => i * 85)
-        .duration(750)
-        .attr("opacity", 1);
+// 3. The Visualization Logic (D3 v5)
+// This recreates the reference animations: Elastic Pop & Delayed Paths
+function drawTree(rootData) {
+  // Clear previous SVG
+  const container = document.getElementById("binary-tree");
+  container.innerHTML = "";
 
-    const nodes = svg.selectAll(".node")
-        .data(rootNode.descendants())
-        .enter().append("g")
-        .attr("class", "node")
-        .attr("transform", d => `translate(${d.x},${d.y})`);
+  if (!rootData) return;
 
-    nodes.append("circle")
-        .attr("r", 0) // Start invisible
-        .attr("fill", d => (d.children || d._children) ? "lightblue" : "lightgray") // Inner nodes blue, leaves gray
-        .attr("stroke", "steelblue")
-        .attr("stroke-width", 3)
-        .transition()
-        .delay((d, i) => i * 80)
-        .duration(1000)
-        .ease(d3.easeElastic) // The specific 'bounce' effect you wanted
-        .attr("r", 20);
+  // -- Configuration --
+  const margin = { top: 40, right: 90, bottom: 50, left: 90 };
+  const width = 1000 - margin.left - margin.right;
+  const height = 500 - margin.top - margin.bottom;
 
-    // ANIMATION: Text Fade In
-    nodes.append("text")
-        .attr("dy", 5)
-        .attr("text-anchor", "middle")
-        .text(d => d.data.value)
-        .style("opacity", 0)
-        .transition()
-        .delay((d, i) => i * 90)
-        .duration(1000)
-        .style("opacity", 1);
+  // -- Setup SVG --
+  const svg = d3.select("#binary-tree").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  // -- Convert to D3 Hierarchy --
+  const root = d3.hierarchy(rootData, d => {
+    const children = [];
+    if (d.left) children.push(d.left);
+    if (d.right) children.push(d.right);
+    return children.length ? children : null;
+  });
+
+  // -- Calculate Layout --
+  const treeLayout = d3.tree().size([width, height]);
+  treeLayout(root);
+
+  // -- 1. Draw Links (Paths) --
+  // D3 v5 uses d3.linkVertical()
+  const linkGenerator = d3.linkVertical()
+    .x(d => d.x)
+    .y(d => d.y * 1.5); // *1.5 spreads the tree out vertically
+
+  const links = svg.selectAll(".link")
+    .data(root.links())
+    .enter().append("path")
+    .attr("class", "link")
+    .attr("d", linkGenerator)
+    .attr("fill", "none")
+    .attr("stroke", "#555")
+    .attr("stroke-width", "2px")
+    .attr("opacity", 0); // Start hidden
+
+  // ANIMATION: Fade in links one by one
+  links.transition()
+    .delay((d, i) => i * 85) // Delay matches reference
+    .duration(750)
+    .attr("opacity", 1);
+
+  // -- 2. Draw Nodes (Circles) --
+  const nodes = svg.selectAll(".node")
+    .data(root.descendants())
+    .enter().append("g")
+    .attr("class", "node")
+    .attr("transform", d => "translate(" + d.x + "," + (d.y * 1.5) + ")");
+
+  // ANIMATION: Elastic Pop
+  nodes.append("circle")
+    .attr("r", 0) // Start at radius 0
+    .attr("fill", d => d.children ? "lightblue" : "lightgray") // Inner vs Leaf color
+    .attr("stroke", "steelblue")
+    .attr("stroke-width", "3px")
+    .transition()
+    .delay((d, i) => i * 80) // Delay matches reference
+    .duration(1000)
+    .ease(d3.easeElastic) // <-- THE BOUNCE EFFECT
+    .attr("r", 20);
+
+  // -- 3. Draw Labels (Text) --
+  nodes.append("text")
+    .attr("dy", 5)
+    .attr("text-anchor", "middle")
+    .text(d => d.data.value)
+    .style("font-size", "12px")
+    .style("font-weight", "bold")
+    .style("opacity", 0)
+    .transition()
+    .delay((d, i) => i * 90)
+    .duration(1000)
+    .style("opacity", 1);
 }
